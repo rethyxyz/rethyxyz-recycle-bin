@@ -15,9 +15,7 @@
 #############
 
 # This can be changed to anything.
-RECYCLE_DIR="$HOME/.Trash"
-
-
+TRASH_BIN="$HOME/.Trash"
 
 #############
 # Functions #
@@ -28,82 +26,69 @@ display_help() {
     printf "List the ITEM(s) you want to remove.\n"
 }
 
-handle_ITEM_exists() {
+handle_item_exists() {
     ITEM_PREFIX=0
     NEW_ITEM="$ITEM"
 
-    while [ -e "$RECYCLE_DIR/$NEW_ITEM" ]; do
+    while [ -e "$TRASH_BIN/$NEW_ITEM" ]; do
         ITEM_PREFIX=$((ITEM_PREFIX+1))
         NEW_ITEM="${ITEM_PREFIX}_${ITEM}"
     done
 
-    /usr/bin/mv "$ITEM" "$NEW_ITEM" \
-        || /usr/bin/sudo /usr/bin/mv "$ITEM" "$NEW_ITEM"
+    mv "$ITEM" "$NEW_ITEM" || sudo mv "$ITEM" "$NEW_ITEM"
 
     ITEM="$NEW_ITEM"
 }
 
-
-
 ########
-# MAIN #
+# Main #
 ########
 
 # If not args given, printf and exit.
-[ $# -eq 0 ] \
-    && { printf ":: No filename(s) given\n"; display_help; exit 1; }
+[ $# -eq 0 ] && { printf "No filename(s) given\n"; display_help; exit 1; }
 
 # Else if an arg matches, call display_help.
-if [ "$*" = "--help" ] || [ "$*" = "-h" ]; then
-    display_help
+if [ "$*" = "--help" ] || [ "$*" = "-h" ]; then display_help; exit 0; fi
 
-    exit 0
-fi
+# If $TRASH_BIN directory doesn't exists, create it.
+[ ! -d "$TRASH_BIN" ] && mkdir -p "$TRASH_BIN"
 
-# If $RECYCLE_DIR directory doesn't exists, create it.
-[ ! -d "$RECYCLE_DIR" ] && mkdir -p "$RECYCLE_DIR"
-
-# Start main program loop. Loops through arguments given.
+# Main program loop. Loops through arguments given.
 for ITEM in "$@"; do
-    # If ITEM exists, continute.
-    if [ -e "$ITEM" ]; then
+    # Pass on current array index if item doesn't exist.
+    [ ! -e "$ITEM" ] && {
+        printf "Item \"%s\" does not exist.\n" "$ITEM";
+        continue;
+    }
 
-        # If link, remove.
-        if [ -L "$ITEM" ]; then
-            {
-                /usr/bin/rm -rf "$ITEM" \
-                && printf "Removed link \"%s\"\n." "$ITEM"
-            } || {
-                /usr/bin/sudo /usr/bin/rm -rf "$ITEM" \
-                && printf "Removed link \"%s\" using sudo.\n" "$ITEM"
-            }
-        # If ITEM empty, remove.
-        elif [ ! -s "$ITEM" ]; then
-            {
-                /usr/bin/rm -rf "$ITEM" \
-                && printf "Removed empty file \"%s\".\n" "$ITEM"
-            } || {
-                /usr/bin/sudo /usr/bin/rm -rf "$ITEM" \
-                && printf "Removed empty file \"%s\" using sudo.\n" "$ITEM"
-            }
-        else
-            # If ITEM exists in recycle bin, rename until no match.
-            [ -e "$RECYCLE_DIR/$ITEM" ] \
-                && handle_ITEM_exists
-
-            # Move file to trash.
-            {
-                /usr/bin/mv "$ITEM" "$RECYCLE_DIR/" \
-                && printf "Item \"%s\" to \"%s\"\n" "$ITEM" "$RECYCLE_DIR"
-            } || {
-                /usr/bin/sudo /usr/bin/mv "$ITEM" "$RECYCLE_DIR/" \
-                && printf "Item \"%s\" to \"%s\" using sudo\n" "$ITEM" "$RECYCLE_DIR"
-            }
-        fi
+    # If link, remove.
+    if [ -L "$ITEM" ]; then
+        {
+            rm -rf "$ITEM" && printf "Removed link \"%s\"\n." "$ITEM"
+        } || {
+            sudo rm -rf "$ITEM" \
+            && printf "Removed link \"%s\" using sudo.\n" "$ITEM"
+        }
+    # If ITEM empty, remove.
+    elif [ ! -s "$ITEM" ]; then
+        {
+            rm -rf "$ITEM" && printf "Removed empty file \"%s\".\n" "$ITEM"
+        } || {
+            sudo rm -rf "$ITEM" \
+            && printf "Removed empty file \"%s\" using sudo.\n" "$ITEM"
+        }
     else
-        printf ":: Item \"%s\" does not exist.\n" "$ITEM"
-        printf "::\n"
-        printf ":: Use --help/-h for help.\n"
+        # If ITEM exists in recycle bin, rename until no match.
+        [ -e "$TRASH_BIN/$ITEM" ] && handle_item_exists
+
+        # Move file to trash.
+        {
+            mv "$ITEM" "$TRASH_BIN/" \
+            && printf "Item \"%s\" to \"%s\"\n" "$ITEM" "$TRASH_BIN"
+        } || {
+            sudo mv "$ITEM" "$TRASH_BIN/" \
+            && printf "Item \"%s\" to \"%s\" using sudo\n" "$ITEM" "$TRASH_BIN"
+        }
     fi
 done
 
