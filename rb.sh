@@ -6,20 +6,25 @@
 # Name: rb.sh
 #
 # Summary:
-# A simple script to imitate the Windows recycle bin on Unix. I still need to
-# implement some features, such as compression, but I'll work on it in time.
+# A simple script to imitate the Windows recycle bin on Unix.
 #
 
-#############
+#+++++++#
+# TODOs #
+#+++++++#
+
+# TODO: Implement a form of file compression.
+
+#+++++++++++#
 # Variables #
-#############
+#+++++++++++#
 
 # This can be changed to anything.
 TRASH_BIN="$HOME/.Trash"
 
-#############
+#+++++++++++#
 # Functions #
-#############
+#+++++++++++#
 
 display_help() {
     printf "%s [ITEM] [ITEM 2] [ITEM 3] ...\n\n" "$0"
@@ -40,9 +45,9 @@ handle_item_exists() {
     ITEM="$NEW_ITEM"
 }
 
-########
+#++++++#
 # Main #
-########
+#++++++#
 
 # If not args given, printf and exit.
 [ $# -eq 0 ] && { printf "No filename(s) given\n"; display_help; exit 1; }
