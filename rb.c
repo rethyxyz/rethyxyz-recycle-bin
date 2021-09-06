@@ -23,12 +23,14 @@ int mv_dir(char *dir, char *trash_bin);
 int rm(char *path);
 void help(char *filename);
 
+// This is sort of convoluted. I'll have to revise this when I get better time.
 int mv_dir(char *dir, char *trash_bin) {
-    //
-
     // This is used later on to skip the first two files, being "." and ".." .
     // meaning this dir, and parent dir.
-    int counter = 0;
+    int counter = 0, incrementor = 0;
+
+    char trash_bin_src[255];
+    char trash_bin_dest[255];
 
     // Pointer for directory entry
     struct dirent *de;
@@ -36,27 +38,27 @@ int mv_dir(char *dir, char *trash_bin) {
     // directory pointer.
     DIR *dir_ptr = opendir(dir);
 
-    char trash_bin_src[255];
-    char trash_bin_dest[255];
+    strcpy(trash_bin_dest, trash_bin);
+    strcat(trash_bin_dest, "/");
+    strcat(trash_bin_dest, dir);
 
     while (1) {
-        strcpy(trash_bin_dest, trash_bin);
-        strcat(trash_bin_dest, "/");
-        strcat(trash_bin_dest, dir);
-
-        if (exists(trash_bin_dest) == 0) {
-                strcpy(trash_bin_dest, trash_bin);
-                strcat(trash_bin_dest, "/");
-                strcat(trash_bin_dest, incrementor);
-                strcat(trash_bin_dest, "_");
-                strcat(trash_bin_dest, dir);
+        if (is_file(trash_bin_dest) == 0) {
+            strcpy(trash_bin_dest, trash_bin);
+            strcat(trash_bin_dest, "/");
+            strcat(trash_bin_dest, incrementor + "0");
+            strcat(trash_bin_dest, "_");
+            strcat(trash_bin_dest, dir);
+        } else {
+            printf("Name is \"%s\"\n", trash_bin_dest);
+            mkdir(trash_bin_dest, 0777);
+            break;
         }
+
+        incrementor++;
+        printf("Currently at %d.\nRepeating. \n", incrementor);
     }
 
-
-    else {
-        mkdir(trash_bin_dest, 0777);
-    }
 
     if (dir_ptr == NULL) {
         printf("Could not open current directory" );
@@ -75,7 +77,7 @@ int mv_dir(char *dir, char *trash_bin) {
             strcat(trash_bin_src, de->d_name);
 
             printf("mv_file(%s, %s);\n", trash_bin_src, trash_bin);
-            mv_file(trash_bin_src, trash_bin);
+            mv_file(trash_bin_src, trash_bin_dest);
         }
 
         counter++;
@@ -98,24 +100,18 @@ int rm(char *path) {
     return 1;
 }
 
-int mv_file(char *src, char *trash_bin) {
-    char dest_final[255];
+int mv_file(char *src, char *dest) {
     char ch;
 
-    strcpy(dest_final, trash_bin);
-    strcat(dest_final, "/");
-    strcat(dest_final, src);
-
     FILE *f_ptr = fopen(src, "r");
-    FILE *f_ptr_2 = fopen(dest_final, "w");
+    FILE *f_ptr_2 = fopen(dest, "w");
 
     if (! f_ptr) {
         printf("Couldn't open \"%s\" for reading.\n", src);
         return 1;
     }
 
-    if (! f_ptr_2) {
-        printf("Couldn't open \"%s\" for writing.\n", dest_final);
+    if (! f_ptr_2) { printf("Couldn't open \"%s\" for writing.\n", dest);
         return 1;
     }
 
@@ -126,7 +122,7 @@ int mv_file(char *src, char *trash_bin) {
     fclose(f_ptr);
     fclose(f_ptr_2);
 
-    printf("Sucessfully wrote to file \"%s\"\n", dest_final);
+    printf("Sucessfully wrote to file \"%s\"\n", dest);
 
     remove(src);
     return 0;
@@ -219,7 +215,8 @@ int main(int argc, char *argv[]) {
 
     // Ensure there's a NULL terminator at the end of the variable. If not,
     // it's going to spit out some weird shit.
-    char trash_bin[] = "/home/brody/.trash\0";
+    char trash_bin[255] = "/home/brody/.trash\0";
+    char *dest_final[255];
     int unsigned i;
 
     // for (i = 0; i < sizeof(trash_bin); i++) {
@@ -251,28 +248,7 @@ int main(int argc, char *argv[]) {
         printf("Made directory %s\n", trash_bin);
     }
 
-    // Remove all of the == 0 s later on. Will make optimation better. Keep for
-    // understanding right now.
-    //
-    //0 == true, 1 == false/other.
     for (i = 1; i < argc; i++) {
-        /*
-            get length of path string. extract the base name. for the basename,
-            take +2. it'll look like this :
-
-                # length of#
-                #  STRING  #
-                # length of#
-
-                | Type: file.
-                | Attribute: empty.
-
-                Action that was taken.
-
-
-            This should create a sort of table format.
-        */
-
         // Check if exists at all. Is file works for this.
         if (is_file(argv[i]) != 0) {
             printf("Item \"%s\" doesn't exist.\n\n", argv[i]);
@@ -306,7 +282,11 @@ int main(int argc, char *argv[]) {
                 continue;
             }
 
-            mv_file(argv[i], trash_bin);
+            strcpy(dest_final, trash_bin);
+            strcat(dest_final, "/");
+            strcat(dest_final, argv[i]);
+
+            mv_file(argv[i], dest_final);
         }
     }
 
